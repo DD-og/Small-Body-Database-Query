@@ -179,28 +179,23 @@ def paginate_dataframe(dataframe, page_size, page_num):
     end = start + page_size
     return dataframe.iloc[start:end], total_pages, page_num
 
-# Load the model at startup, outside of any Streamlit function
-model_path = 'comet_diameter_model.joblib'
-if os.path.exists(model_path):
-    try:
-        model = joblib.load(model_path)
-    except Exception as e:
-        model = None
-        model_error = str(e)
-else:
-    model = None
-    model_error = "Model file not found."
-
 # Predict diameter using pre-trained model
 def predict_diameter(data):
     st.header("Diameter Prediction")
     
+    model_path = 'comet_diameter_model.joblib'
     features = ['H', 'e', 'a', 'q', 'i', 'om', 'w']
     
-    if model is not None:
-        st.success("Pre-trained model loaded successfully.")
-    else:
-        st.warning(f"Could not load pre-trained model: {model_error}")
+    try:
+        # Attempt to load the pre-trained model
+        if os.path.exists(model_path):
+            model = joblib.load(model_path)
+            st.success("Pre-trained model loaded successfully.")
+        else:
+            raise FileNotFoundError("Model file not found.")
+    
+    except Exception as e:
+        st.warning(f"Could not load pre-trained model: {str(e)}")
         st.info("Creating a simple linear regression model instead.")
         
         # Prepare data for simple model
