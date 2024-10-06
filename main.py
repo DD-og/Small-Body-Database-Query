@@ -186,16 +186,20 @@ def predict_diameter(data):
     model_path = 'comet_diameter_model.joblib'
     features = ['H', 'e', 'a', 'q', 'i', 'om', 'w']
     
+    # Initialize model as None
+    model = None
+    
     try:
         # Attempt to load the pre-trained model
         if os.path.exists(model_path):
             model = joblib.load(model_path)
             st.success("Pre-trained model loaded successfully.")
         else:
-            raise FileNotFoundError("Model file not found.")
-    
+            st.warning("Model file not found.")
     except Exception as e:
         st.warning(f"Could not load pre-trained model: {str(e)}")
+    
+    if model is None:
         st.info("Creating a simple linear regression model instead.")
         
         # Prepare data for simple model
