@@ -52,7 +52,16 @@ st.markdown("""
 # Function to load data
 @st.cache_data
 def load_data():
-    data = pd.read_csv('sbdb_query_results.csv')
+    data = pd.read_csv('sbdb_query_results_sample.csv')
+    # If 'full_name' column doesn't exist, create it from available columns
+    if 'full_name' not in data.columns:
+        if 'name' in data.columns:
+            data['full_name'] = data['name']
+        elif 'pdes' in data.columns:
+            data['full_name'] = data['pdes']
+        else:
+            # If no suitable column is found, create a generic name
+            data['full_name'] = [f"Object_{i}" for i in range(len(data))]
     return data
 
 # Interactive scatter plot
@@ -81,46 +90,55 @@ def interactive_histogram_orbital_eccentricity(data):
 # Comet details
 def display_comet_details(data):
     st.header("Comet Details")
-    comet_name = st.selectbox("Select a comet", data['full_name'].tolist())
-    
-    if comet_name:
-        comet_data = data[data['full_name'] == comet_name].iloc[0]
-        st.subheader(f"Details for {comet_name}")
-        col1, col2 = st.columns(2)
-        for i, (column, value) in enumerate(comet_data.items()):
-            if column != 'full_name':
-                with col1 if i % 2 == 0 else col2:
-                    st.metric(label=column, value=value)
+    if 'full_name' in data.columns:
+        comet_name = st.selectbox("Select a comet", data['full_name'].tolist())
+        
+        if comet_name:
+            comet_data = data[data['full_name'] == comet_name].iloc[0]
+            st.subheader(f"Details for {comet_name}")
+            col1, col2 = st.columns(2)
+            for i, (column, value) in enumerate(comet_data.items()):
+                if column != 'full_name':
+                    with col1 if i % 2 == 0 else col2:
+                        st.metric(label=column, value=value)
+    else:
+        st.warning("Comet names are not available in the dataset.")
 
 # Search functionality
 def search_comets(data):
     st.sidebar.header("Search Comets")
-    search_term = st.sidebar.text_input("Enter comet name or designation")
-    if search_term:
-        filtered_data = data[data['full_name'].str.contains(search_term, case=False, na=False)]
-        return filtered_data
+    if 'full_name' in data.columns:
+        search_term = st.sidebar.text_input("Enter comet name or designation")
+        if search_term:
+            filtered_data = data[data['full_name'].str.contains(search_term, case=False, na=False)]
+            return filtered_data
+    else:
+        st.sidebar.warning("Search functionality is not available due to missing comet names.")
     return data
 
 # Comparison tool
 def compare_comets(data):
     st.header("Comet Comparison Tool")
-    col1, col2 = st.columns(2)
-    with col1:
-        comet1 = st.selectbox("Select first comet", data['full_name'].tolist(), key='comet1')
-    with col2:
-        comet2 = st.selectbox("Select second comet", data['full_name'].tolist(), key='comet2')
-    
-    if comet1 and comet2:
-        comet1_data = data[data['full_name'] == comet1].iloc[0]
-        comet2_data = data[data['full_name'] == comet2].iloc[0]
+    if 'full_name' in data.columns:
+        col1, col2 = st.columns(2)
+        with col1:
+            comet1 = st.selectbox("Select first comet", data['full_name'].tolist(), key='comet1')
+        with col2:
+            comet2 = st.selectbox("Select second comet", data['full_name'].tolist(), key='comet2')
         
-        for column in data.columns:
-            if column != 'full_name':
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric(label=f"{column} ({comet1})", value=comet1_data[column])
-                with col2:
-                    st.metric(label=f"{column} ({comet2})", value=comet2_data[column])
+        if comet1 and comet2:
+            comet1_data = data[data['full_name'] == comet1].iloc[0]
+            comet2_data = data[data['full_name'] == comet2].iloc[0]
+            
+            for column in data.columns:
+                if column != 'full_name':
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.metric(label=f"{column} ({comet1})", value=comet1_data[column])
+                    with col2:
+                        st.metric(label=f"{column} ({comet2})", value=comet2_data[column])
+    else:
+        st.warning("Comet comparison is not available due to missing comet names.")
 
 # Statistical summary
 def statistical_summary(data):
