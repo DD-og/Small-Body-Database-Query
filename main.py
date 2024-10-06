@@ -5,6 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import math
 import joblib
+import os
 
 # Set page config
 st.set_page_config(page_title="Comet Analysis Dashboard", layout="wide", initial_sidebar_state="expanded")
@@ -181,26 +182,37 @@ def paginate_dataframe(dataframe, page_size, page_num):
 def predict_diameter(data):
     st.header("Diameter Prediction")
     
-    # Load the pre-trained model
-    model = joblib.load('comet_diameter_model.joblib')
+    model_path = 'comet_diameter_model.joblib'
     
-    features = ['H', 'e', 'a', 'q', 'i', 'om', 'w']
+    if not os.path.exists(model_path):
+        st.error("The pre-trained model file is missing. Please ensure 'comet_diameter_model.joblib' is in the same directory as the script.")
+        return
     
-    # Allow user to input values for prediction
-    user_input = {}
-    for feature in features:
-        user_input[feature] = st.number_input(f"Enter {feature}")
-    
-    if st.button("Predict Diameter"):
-        prediction = model.predict([list(user_input.values())])
-        st.write(f"Predicted Diameter: {prediction[0]:.2f} km")
+    try:
+        # Load the pre-trained model
+        model = joblib.load(model_path)
+        
+        features = ['H', 'e', 'a', 'q', 'i', 'om', 'w']
+        
+        # Allow user to input values for prediction
+        user_input = {}
+        for feature in features:
+            user_input[feature] = st.number_input(f"Enter {feature}")
+        
+        if st.button("Predict Diameter"):
+            prediction = model.predict([list(user_input.values())])
+            st.write(f"Predicted Diameter: {prediction[0]:.2f} km")
 
-    # Optional: Display feature importances if available
-    if hasattr(model, 'feature_importances_'):
-        st.subheader("Feature Importances")
-        importances = pd.DataFrame({'feature': features, 'importance': model.feature_importances_})
-        importances = importances.sort_values('importance', ascending=False)
-        st.bar_chart(importances.set_index('feature'))
+        # Optional: Display feature importances if available
+        if hasattr(model, 'feature_importances_'):
+            st.subheader("Feature Importances")
+            importances = pd.DataFrame({'feature': features, 'importance': model.feature_importances_})
+            importances = importances.sort_values('importance', ascending=False)
+            st.bar_chart(importances.set_index('feature'))
+    
+    except Exception as e:
+        st.error(f"An error occurred while loading or using the model: {str(e)}")
+        st.error("Please check if the model file is correctly formatted and compatible with the current environment.")
 
 # Main function
 def main():
