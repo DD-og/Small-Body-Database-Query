@@ -52,7 +52,7 @@ st.markdown("""
 # Function to load data
 @st.cache_data
 def load_data():
-    data = pd.read_csv('sbdb_query_results_sample.csv')
+    data = pd.read_csv('sbdb_query_results.csv')
     return data
 
 # Interactive scatter plot
