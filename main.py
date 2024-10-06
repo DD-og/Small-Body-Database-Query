@@ -4,6 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import math
+from sklearn.linear_model import LinearRegression
 import joblib
 import os
 
@@ -183,36 +184,60 @@ def predict_diameter(data):
     st.header("Diameter Prediction")
     
     model_path = 'comet_diameter_model.joblib'
-    
-    if not os.path.exists(model_path):
-        st.error("The pre-trained model file is missing. Please ensure 'comet_diameter_model.joblib' is in the same directory as the script.")
-        return
+    features = ['H', 'e', 'a', 'q', 'i', 'om', 'w']
     
     try:
-        # Load the pre-trained model
-        model = joblib.load(model_path)
-        
-        features = ['H', 'e', 'a', 'q', 'i', 'om', 'w']
-        
-        # Allow user to input values for prediction
-        user_input = {}
-        for feature in features:
-            user_input[feature] = st.number_input(f"Enter {feature}")
-        
-        if st.button("Predict Diameter"):
-            prediction = model.predict([list(user_input.values())])
-            st.write(f"Predicted Diameter: {prediction[0]:.2f} km")
-
-        # Optional: Display feature importances if available
-        if hasattr(model, 'feature_importances_'):
-            st.subheader("Feature Importances")
-            importances = pd.DataFrame({'feature': features, 'importance': model.feature_importances_})
-            importances = importances.sort_values('importance', ascending=False)
-            st.bar_chart(importances.set_index('feature'))
+        # Attempt to load the pre-trained model
+        if os.path.exists(model_path):
+            model = joblib.load(model_path)
+            st.success("Pre-trained model loaded successfully.")
+        else:
+            raise FileNotFoundError("Model file not found.")
     
     except Exception as e:
-        st.error(f"An error occurred while loading or using the model: {str(e)}")
-        st.error("Please check if the model file is correctly formatted and compatible with the current environment.")
+        st.warning(f"Could not load pre-trained model: {str(e)}")
+        st.info("Creating a simple linear regression model instead.")
+        
+        # Prepare data for simple model
+        X = data[features].dropna()
+        y = data['diameter'].dropna()
+        common_index = X.index.intersection(y.index)
+        X = X.loc[common_index]
+        y = y.loc[common_index]
+        
+        if len(X) == 0 or len(y) == 0:
+            st.error("Not enough data to create a prediction model.")
+            return
+        
+        # Create and train a simple linear regression model
+        model = LinearRegression()
+        model.fit(X, y)
+    
+    # Allow user to input values for prediction
+    user_input = {}
+    for feature in features:
+        user_input[feature] = st.number_input(f"Enter {feature}", value=float(data[feature].mean()))
+    
+    if st.button("Predict Diameter"):
+        prediction = model.predict([list(user_input.values())])
+        st.write(f"Predicted Diameter: {prediction[0]:.2f} km")
+
+    # Display feature importances if available
+    if hasattr(model, 'feature_importances_'):
+        importances = model.feature_importances_
+    elif hasattr(model, 'coef_'):
+        importances = np.abs(model.coef_)
+    else:
+        importances = None
+    
+    if importances is not None:
+        st.subheader("Feature Importances")
+        imp_df = pd.DataFrame({'feature': features, 'importance': importances})
+        imp_df = imp_df.sort_values('importance', ascending=False)
+        st.bar_chart(imp_df.set_index('feature'))
+
+    if not os.path.exists(model_path):
+        st.warning("Note: This is a simple model created on the fly and may not be as accurate as a properly trained model.")
 
 # Main function
 def main():
